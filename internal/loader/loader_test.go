@@ -18,7 +18,7 @@ func TestLoader_getLinksAndBase(t *testing.T) {
 		expBases []string
 	}
 
-	// html.Parse() accepts any input anf never returns an error (empty page, unknown tags, non-closed tags).
+	// html.Parse() accepts any input and never returns an error (empty page, unknown tags, non-closed tags).
 	// Errors may happen only in case of Reader errors – io.EOF or other errors.
 	// Tests don't cover those cases.
 
@@ -111,6 +111,17 @@ func TestLoader_updateLinksWithBase(t *testing.T) {
 				"http://hello.com/some/rel/link",
 				"http://hello.com/rel/link",
 			},
+		},
+
+		"non HTTP links": {
+			links: []string{
+				"mailto:someone@home.com",
+				"someone@home.com",
+				"#page-anchor",
+			},
+			pageURL:  "http://hello.com/",
+			baseURL:  "some/more",
+			expLinks: nil,
 		},
 	}
 

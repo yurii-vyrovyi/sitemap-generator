@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/yurii-vyrovyi/sitemap-generator/internal/reporter"
 	"log"
 	"os"
 	"os/signal"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/yurii-vyrovyi/sitemap-generator/internal/core"
 	"github.com/yurii-vyrovyi/sitemap-generator/internal/loader"
+	"github.com/yurii-vyrovyi/sitemap-generator/internal/reporter"
 )
 
 const (

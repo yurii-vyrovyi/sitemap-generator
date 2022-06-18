@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"golang.org/x/net/html"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-
-	"golang.org/x/net/html"
+	"strings"
 )
 
 const (
@@ -158,12 +158,28 @@ func updateLinksWithBase(links []string, base, page string) []string {
 
 	for _, link := range links {
 
-		resURL, err := urlBase.Parse(link)
+		noHashLink, _, _ := strings.Cut(link, "#")
+
+		if len(noHashLink) == 0 {
+			continue
+		}
+
+		urlLink, err := url.Parse(link)
+		if err != nil || (urlLink.Scheme != "http" && urlLink.Scheme != "https") {
+			continue
+		}
+
+		resURL, err := urlBase.Parse(noHashLink)
 		if err != nil {
 			log.Printf("ERR: failed to join base url [%v] and link [%v]: %v", base, link, err)
 			continue
 		}
+
 		res = append(res, resURL.String())
+	}
+
+	if len(res) == 0 {
+		return nil
 	}
 
 	return res

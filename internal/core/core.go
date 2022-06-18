@@ -7,8 +7,7 @@ import (
 
 type (
 	PageLoader interface {
-		GetPage(string) ([]byte, error)
-		GetPageLinks(pageURL string) []string
+		GetPageLinks(context.Context, string) []string
 	}
 
 	Reporter interface {
@@ -40,7 +39,7 @@ func New(config Config, pageLoader PageLoader, reporter Reporter) *Core {
 
 func (cr *Core) Run(ctx context.Context) error {
 
-	links := cr.pageLoader.GetPageLinks(cr.config.URL)
+	links := cr.pageLoader.GetPageLinks(ctx, cr.config.URL)
 
 	fmt.Println("links")
 
