@@ -2,6 +2,7 @@ package loader
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,49 +12,27 @@ import (
 	"golang.org/x/net/html"
 )
 
-type (
-	Loader struct {
-	}
-)
-
 const (
 	TagA     = "a"
 	TagBase  = "base"
 	AttrHref = "href"
 )
 
+type Loader struct{}
+
 func New() *Loader {
 	return &Loader{}
 }
 
-func (l *Loader) GetPage(pageURL string) ([]byte, error) {
-	return l.getPage(pageURL)
-}
+func (l *Loader) GetPage(ctx context.Context, pageURL string) ([]byte, error) {
 
-func (l *Loader) getPage(pageURL string) ([]byte, error) {
-
-	resp, err := http.Get(pageURL)
-	if err != nil {
-		return nil, fmt.Errorf(" GET request failed: %w", err)
-	}
-
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failde to read page from response: %w", err)
-	}
-
-	return body, nil
+	return getPage(ctx, pageURL)
 }
 
 // GetPageLinks returns all URLs of <a> tags on the page. URLs are absolute.
 // GetPageLinks ignores invalid URLs including <base> href URL.
-func (l *Loader) GetPageLinks(pageURL string) []string {
-
-	// TODO: should ignore pages with invalid BASE href url
-
-	page, err := l.getPage(pageURL)
+func (l *Loader) GetPageLinks(ctx context.Context, pageURL string) []string {
+	page, err := getPage(ctx, pageURL)
 	if err != nil {
 		log.Printf("failed to load page: %v", err)
 		return nil
@@ -72,7 +51,6 @@ func (l *Loader) GetPageLinks(pageURL string) []string {
 	} else {
 		baseURL = bases[0]
 
-		// TODO: test
 		if len(bases) > 1 {
 			baseValue := fmt.Sprintf(`<base href="%v"/>`, bases[0])
 			log.Printf("ERR: page [%v] has more than one <base>. Applying %v", pageURL, baseValue)
@@ -82,6 +60,28 @@ func (l *Loader) GetPageLinks(pageURL string) []string {
 	absLinks := updateLinksWithBase(links, baseURL, pageURL)
 
 	return absLinks
+}
+
+func getPage(ctx context.Context, pageURL string) ([]byte, error) {
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to run request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf(" GET request failed: %w", err)
+	}
+
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failde to read page from response: %w", err)
+	}
+
+	return body, nil
 }
 
 // getLinksAndBase extracts all <a> tag links and all <base> href links.
@@ -137,7 +137,7 @@ func getLinksAndBase(page []byte) ([]string, []string) {
 }
 
 // updateLinksWithBase transforms all links to an absolute form.
-// First <base> URL is resolved against a page URL (if base URL is relative).
+// <base> URL is resolved against a page URL (if base URL is relative).
 // Then every link is resolved against absolute base URL.
 func updateLinksWithBase(links []string, base, page string) []string {
 

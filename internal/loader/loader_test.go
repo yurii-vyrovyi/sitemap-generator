@@ -1,6 +1,9 @@
 package loader
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -52,7 +55,6 @@ func TestLoader_getLinksAndBase(t *testing.T) {
 			require.Equal(t, test.expBases, bases)
 		})
 	}
-
 }
 
 func TestLoader_updateLinksWithBase(t *testing.T) {
@@ -125,4 +127,51 @@ func TestLoader_updateLinksWithBase(t *testing.T) {
 		})
 	}
 
+}
+
+func TestLoader_getPageLinks(t *testing.T) {
+	t.Parallel()
+
+	type Test struct {
+		srcPage []byte
+		expRes  []string
+	}
+
+	tests := map[string]Test{
+		"OK": {
+			srcPage: pageOK,
+			expRes: []string{
+				"http://abs.link.com",
+				"http://test.com/rel/link",
+			},
+		},
+
+		"Multiple bases": {
+			srcPage: pageWithTwoBases,
+			expRes: []string{
+				"http://abs.link.com",
+				"http://test.com/rel/link",
+			},
+		},
+	}
+
+	ctx := context.Background()
+
+	//nolint:paralleltest
+	for description, test := range tests {
+		test := test
+
+		t.Run(description, func(t *testing.T) {
+			t.Parallel()
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write(test.srcPage)
+			}))
+
+			ldr := New()
+			res := ldr.GetPageLinks(ctx, server.URL)
+
+			require.Equal(t, test.expRes, res)
+		})
+	}
 }
