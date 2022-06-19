@@ -2,8 +2,9 @@ package core
 
 import (
 	"context"
-	"github.com/yurii-vyrovyi/sitemap-generator/internal/queue"
 	"sync"
+
+	"github.com/yurii-vyrovyi/sitemap-generator/internal/queue"
 )
 
 //go:generate mockgen -source core.go -destination mock_core.go -package core
@@ -23,8 +24,15 @@ type (
 		pageLoader PageLoader
 		reporter   Reporter
 
-		levelMap   map[string]PageLevelItem
-		root       *PageItem
+		// levelMap stores processed URLs and a parent.
+		// In case we encounter an URL again, we can compare its level and leave the one with a lower level,
+		// so resulting map will have more entries.
+		levelMap map[string]PageLevelItem
+
+		// Root element in a references tree
+		root *PageItem
+
+		// Stores tasks for workers
 		tasksQueue *queue.ConcurrentQueue
 	}
 
@@ -36,22 +44,27 @@ type (
 )
 
 type (
+
+	// PageItem is an entry for resulting references tree
 	PageItem struct {
 		url      string
 		children []*PageItem
 	}
 
+	// PageLevelItem stores level and parent to be able to deal with duplicates
 	PageLevelItem struct {
 		level  int
 		parent *PageItem
 	}
 
+	// Task is a task for workers
 	Task struct {
 		level  int
 		url    string
 		parent *PageItem
 	}
 
+	// TaskResult is a result of workers' job
 	TaskResult struct {
 		url    string
 		level  int
@@ -85,6 +98,7 @@ func (item *PageItem) dropChild(url string) {
 	}
 }
 
+// New returns and instance of Core
 func New(config Config, pageLoader PageLoader, reporter Reporter) *Core {
 	return &Core{
 		config:     config,
@@ -95,6 +109,9 @@ func New(config Config, pageLoader PageLoader, reporter Reporter) *Core {
 	}
 }
 
+// Run starts links collection.
+// It parses pages and collects links and recursively requests links for these pages.
+// It finishes when all links are collected or MaxDepth is riched.
 func (cr *Core) Run(ctx context.Context) error {
 
 	wg := sync.WaitGroup{}
@@ -136,37 +153,48 @@ func (cr *Core) Run(ctx context.Context) error {
 
 				existingResult, ok := cr.levelMap[res.url]
 
+				insertNewItem := true
 				if !ok {
 					cr.levelMap[res.url] = pgLvlItem
 				} else {
+					// we already were on this page
+
 					if existingResult.level > res.level {
+						// existing page has greater depth, and we want to replace it
 						existingResult.parent.dropChild(res.url)
 						cr.levelMap[res.url] = pgLvlItem
+					} else {
+						// existing page has lower depth, and we have nothing to do with it
+						insertNewItem = false
 					}
 				}
 
-				item := PageItem{
-					url:      res.url,
-					children: nil,
-				}
+				if insertNewItem {
 
-				if res.parent == nil {
-					cr.root = &item
-				} else {
-					res.parent.addChild(&item)
-				}
+					item := PageItem{
+						url:      res.url,
+						children: nil,
+					}
 
-				if res.level < cr.config.MaxDepth {
-					for _, r := range res.links {
-						cr.tasksQueue.Push(Task{
-							level:  res.level + 1,
-							url:    r,
-							parent: &item,
-						})
+					if res.parent == nil {
+						cr.root = &item
+					} else {
+						res.parent.addChild(&item)
+					}
 
-						tasksCounter++
+					if res.level < cr.config.MaxDepth {
+						for _, r := range res.links {
+							cr.tasksQueue.Push(Task{
+								level:  res.level + 1,
+								url:    r,
+								parent: &item,
+							})
+
+							tasksCounter++
+						}
 					}
 				}
+
 				tasksCounter--
 
 				if tasksCounter == 0 {
@@ -184,6 +212,9 @@ func (cr *Core) Run(ctx context.Context) error {
 	return nil
 }
 
+// runWorker runs a routine that pops tasks from a queue, requests a page,
+// gets links and returns is to the dedicated chan.
+// A routine exits when the queue's Pop() returns an error.
 func (cr *Core) runWorker(
 	ctx context.Context,
 	wg *sync.WaitGroup,

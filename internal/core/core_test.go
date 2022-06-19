@@ -16,7 +16,7 @@ func TestCore_Run(t *testing.T) {
 		startURL string
 		maxDepth int
 		srcLinks map[string][]string
-		res      interface{}
+		res      map[string]interface{}
 	}
 
 	tests := map[string]Test{
@@ -40,14 +40,14 @@ func TestCore_Run(t *testing.T) {
 				},
 			},
 
-			res: []string{
-				"start.e.com",
-				"start.e.com:p_00_01.e.com",
-				"start.e.com:p_00_01.e.com:p_01_01.e.com",
-				"start.e.com:p_00_01.e.com:p_01_02.e.com",
-				"start.e.com:p_00_02.e.com",
-				"start.e.com:p_00_02.e.com:p_02_01.e.com",
-				"start.e.com:p_00_02.e.com:p_02_02.e.com",
+			res: map[string]interface{}{
+				"start.e.com":                             nil,
+				"start.e.com:p_00_01.e.com":               nil,
+				"start.e.com:p_00_01.e.com:p_01_01.e.com": nil,
+				"start.e.com:p_00_01.e.com:p_01_02.e.com": nil,
+				"start.e.com:p_00_02.e.com":               nil,
+				"start.e.com:p_00_02.e.com:p_02_01.e.com": nil,
+				"start.e.com:p_00_02.e.com:p_02_02.e.com": nil,
 			},
 		},
 
@@ -76,14 +76,14 @@ func TestCore_Run(t *testing.T) {
 				},
 			},
 
-			res: []string{
-				"start.e.com",
-				"start.e.com:p_00_01.e.com",
-				"start.e.com:p_00_01.e.com:p_01_01.e.com",
-				"start.e.com:p_00_01.e.com:p_01_02.e.com",
-				"start.e.com:p_00_02.e.com",
-				"start.e.com:p_00_02.e.com:p_02_01.e.com",
-				"start.e.com:p_00_02.e.com:p_02_02.e.com",
+			res: map[string]interface{}{
+				"start.e.com":                             nil,
+				"start.e.com:p_00_01.e.com":               nil,
+				"start.e.com:p_00_01.e.com:p_01_01.e.com": nil,
+				"start.e.com:p_00_01.e.com:p_01_02.e.com": nil,
+				"start.e.com:p_00_02.e.com":               nil,
+				"start.e.com:p_00_02.e.com:p_02_01.e.com": nil,
+				"start.e.com:p_00_02.e.com:p_02_02.e.com": nil,
 			},
 		},
 
@@ -101,24 +101,61 @@ func TestCore_Run(t *testing.T) {
 					"p_01_02.e.com",
 				},
 
+				"p_01_01.e.com": {
+					"p_01_03.e.com",
+					"p_01_04.e.com",
+				},
+
 				"p_00_02.e.com": {
-					"p_02_01.e.com",
+					"p_01_03.e.com",
+					"p_02_02.e.com",
+				},
+			},
+			res: map[string]interface{}{
+				"start.e.com":                                           nil,
+				"start.e.com:p_00_01.e.com":                             nil,
+				"start.e.com:p_00_01.e.com:p_01_01.e.com":               nil,
+				"start.e.com:p_00_01.e.com:p_01_02.e.com":               nil,
+				"start.e.com:p_00_01.e.com:p_01_01.e.com:p_01_04.e.com": nil,
+				"start.e.com:p_00_02.e.com":                             nil,
+				"start.e.com:p_00_02.e.com:p_01_03.e.com":               nil,
+				"start.e.com:p_00_02.e.com:p_02_02.e.com":               nil,
+			},
+		},
+
+		"Cycle": {
+			startURL: "start.e.com",
+			maxDepth: 5,
+			srcLinks: map[string][]string{
+				"start.e.com": {
+					"p_00_01.e.com",
+					"p_00_02.e.com",
+				},
+
+				"p_00_01.e.com": {
+					"p_01_01.e.com",
 					"p_02_02.e.com",
 				},
 
-				"p_02_01.e.com": {
-					"start.e.com",
-					"p_01_01.e.com",
+				"p_00_02.e.com": {
+					"p_02_01.e.com",
+					"p_02_03.e.com",
+				},
+
+				"p_02_03.e.com": {
+					"p_00_01.e.com",
+					"p_02_02.e.com",
 				},
 			},
-			res: []string{
-				"start.e.com",
-				"start.e.com:p_00_01.e.com",
-				"start.e.com:p_00_01.e.com:p_01_01.e.com",
-				"start.e.com:p_00_01.e.com:p_01_02.e.com",
-				"start.e.com:p_00_02.e.com",
-				"start.e.com:p_00_02.e.com:p_02_01.e.com",
-				"start.e.com:p_00_02.e.com:p_02_02.e.com",
+
+			res: map[string]interface{}{
+				"start.e.com":                             nil,
+				"start.e.com:p_00_01.e.com":               nil,
+				"start.e.com:p_00_01.e.com:p_01_01.e.com": nil,
+				"start.e.com:p_00_01.e.com:p_02_02.e.com": nil,
+				"start.e.com:p_00_02.e.com":               nil,
+				"start.e.com:p_00_02.e.com:p_02_01.e.com": nil,
+				"start.e.com:p_00_02.e.com:p_02_03.e.com": nil,
 			},
 		},
 	}
@@ -140,7 +177,7 @@ func TestCore_Run(t *testing.T) {
 					return test.srcLinks[url]
 				})
 
-			var res []string
+			res := make(map[string]interface{})
 
 			mockReporter := NewMockReporter(mockCtrl)
 			mockReporter.EXPECT().Save(gomock.Any()).AnyTimes().Do(func(root *PageItem) {
@@ -156,7 +193,7 @@ func TestCore_Run(t *testing.T) {
 						curPath = fmt.Sprintf("%s:%s", parentPath, item.url)
 					}
 
-					res = append(res, curPath)
+					res[curPath] = nil
 
 					if len(item.children) == 0 {
 						return
