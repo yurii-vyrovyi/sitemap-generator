@@ -3,6 +3,7 @@ module github.com/yurii-vyrovyi/sitemap-generator
 go 1.18
 
 require (
+	github.com/golang/mock v1.6.0
 	github.com/stretchr/testify v1.7.2
 	golang.org/x/net v0.0.0-20220617184016-355a448f1bc9
 )
