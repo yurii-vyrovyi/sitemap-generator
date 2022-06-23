@@ -83,14 +83,14 @@ func run(ctx context.Context) error {
 	var MaxDepth int
 	d, ok := argsMap[ParamMaxDepth]
 	if ok {
-		MaxDepth, _ = d.(int)
+		MaxDepth, _ = d.(int) //nolint:errcheck
 	}
 	if MaxDepth == 0 {
 		MaxDepth = DefaultMaxDepth
 	}
 
 	of := argsMap[ParamOutputFile]
-	outputFile, _ := of.(string)
+	outputFile, _ := of.(string) //nolint:errcheck
 
 	if len(outputFile) == 0 {
 		outputFile = DefaultOutputFile
@@ -136,7 +136,7 @@ func parseArgs(args []string, mapKeys map[string]interface{}) (map[string]interf
 			continue
 		}
 
-		stringArg, _ := arg.(string)
+		stringArg, _ := arg.(string) //nolint:errcheck
 
 		switch v.(type) {
 		case string:

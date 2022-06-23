@@ -17,7 +17,7 @@ type (
 	}
 
 	Reporter interface {
-		Save([]string) error
+		Save(*PageItem) error
 	}
 )
 
@@ -52,8 +52,8 @@ type (
 
 	// PageItem is an entry for resulting references tree
 	PageItem struct {
-		url      string
-		children []*PageItem
+		URL      string
+		Children []*PageItem
 	}
 
 	// PageLevelItem stores level and parent to be able to deal with duplicates
@@ -79,23 +79,23 @@ type (
 )
 
 func (item *PageItem) addChild(c *PageItem) {
-	item.children = append(item.children, c)
+	item.Children = append(item.Children, c)
 }
 
 func (item *PageItem) dropChild(url string) {
-	for i, c := range item.children {
-		if c.url == url {
-			item.children[i] = nil
+	for i, c := range item.Children {
+		if c.URL == url {
+			item.Children[i] = nil
 
 			switch {
 			case i == 0:
-				item.children = item.children[1:]
+				item.Children = item.Children[1:]
 
-			case i == len(item.children)-1:
-				item.children = item.children[1:]
+			case i == len(item.Children)-1:
+				item.Children = item.Children[1:]
 
 			default:
-				item.children = append(item.children[0:i], item.children[i+1:]...)
+				item.Children = append(item.Children[0:i], item.Children[i+1:]...)
 			}
 
 			return
@@ -132,7 +132,6 @@ func (cr *Core) Run(ctx context.Context) error {
 
 	cr.rootDomain = domainURL.Hostname()
 
-	wg := sync.WaitGroup{}
 	chanResults := make(chan TaskResult)
 	chanErr := make(chan error)
 
@@ -148,89 +147,7 @@ func (cr *Core) Run(ctx context.Context) error {
 		cr.runWorker(ctx, &wgWorkers, chanResults, nil)
 	}
 
-	cr.tasksQueue.Push(Task{
-		level:  0,
-		url:    cr.config.URL,
-		parent: nil,
-	})
-	tasksCounter := 1
-
-	wg.Add(1)
-	go func() {
-		defer func() {
-			wg.Done()
-		}()
-
-		// loop:
-		for {
-			select {
-			case <-ctx.Done():
-				return
-
-			case res, ok := <-chanResults:
-				if !ok {
-					return
-				}
-
-				pgLvlItem := PageLevelItem{
-					level:  res.level,
-					parent: res.parent,
-				}
-
-				existingResult, ok := cr.levelMap[res.url]
-
-				insertNewItem := true
-				if !ok {
-					cr.levelMap[res.url] = pgLvlItem
-				} else {
-					// we already were on this page
-
-					if existingResult.level > res.level {
-						// existing page has greater depth, and we want to replace it
-						existingResult.parent.dropChild(res.url)
-						cr.levelMap[res.url] = pgLvlItem
-					} else {
-						// existing page has lower depth, and we have nothing to do with it
-						insertNewItem = false
-					}
-				}
-
-				if insertNewItem {
-
-					item := PageItem{
-						url:      res.url,
-						children: nil,
-					}
-
-					if res.parent == nil {
-						cr.root = &item
-					} else {
-						res.parent.addChild(&item)
-					}
-
-					if res.level < cr.config.MaxDepth {
-						for _, r := range res.links {
-							cr.tasksQueue.Push(Task{
-								level:  res.level + 1,
-								url:    r,
-								parent: &item,
-							})
-
-							tasksCounter++
-						}
-					}
-				}
-
-				tasksCounter--
-
-				if tasksCounter == 0 {
-					return
-				}
-			}
-		}
-	}()
-
-	wg.Wait()
+	cr.runTasksManager(ctx, chanResults)
 
 	cr.tasksQueue.Close()
 	wgWorkers.Wait()
@@ -238,13 +155,91 @@ func (cr *Core) Run(ctx context.Context) error {
 	close(chanResults)
 	close(chanErr)
 
-	links := cr.getLinksList()
-
-	if err := cr.reporter.Save(links); err != nil {
+	if err := cr.reporter.Save(cr.root); err != nil {
 		return fmt.Errorf("failed to save results: %w", err)
 	}
 
 	return nil
+}
+
+// runTasksManager gets tasks results from the channel, checks if a link needs to be processed and pushes a new task.
+func (cr *Core) runTasksManager(
+	ctx context.Context,
+	chanResults chan TaskResult,
+) {
+	cr.tasksQueue.Push(Task{
+		level:  0,
+		url:    cr.config.URL,
+		parent: nil,
+	})
+	tasksCounter := 1
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case res, ok := <-chanResults:
+			if !ok {
+				return
+			}
+
+			pgLvlItem := PageLevelItem{
+				level:  res.level,
+				parent: res.parent,
+			}
+
+			existingResult, ok := cr.levelMap[res.url]
+
+			insertNewItem := true
+			if !ok {
+				cr.levelMap[res.url] = pgLvlItem
+			} else {
+				// we already were on this page
+
+				if existingResult.level > res.level {
+					// existing page has greater depth, and we want to replace it
+					existingResult.parent.dropChild(res.url)
+					cr.levelMap[res.url] = pgLvlItem
+				} else {
+					// existing page has lower depth, and we have nothing to do with it
+					insertNewItem = false
+				}
+			}
+
+			if insertNewItem {
+
+				item := PageItem{
+					URL:      res.url,
+					Children: nil,
+				}
+
+				if res.parent == nil {
+					cr.root = &item
+				} else {
+					res.parent.addChild(&item)
+				}
+
+				if res.level < cr.config.MaxDepth {
+					for _, r := range res.links {
+						cr.tasksQueue.Push(Task{
+							level:  res.level + 1,
+							url:    r,
+							parent: &item,
+						})
+
+						tasksCounter++
+					}
+				}
+			}
+
+			tasksCounter--
+
+			if tasksCounter == 0 {
+				return
+			}
+		}
+	}
 }
 
 // runWorker runs a routine that pops tasks from a queue, requests a page,
@@ -317,18 +312,18 @@ func (cr *Core) runWorker(
 
 }
 
-func (cr *Core) getLinksList() []string {
-
-	res := make([]string, 0, len(cr.levelMap))
-
-	for k := range cr.levelMap {
-
-		if k == cr.rootDomain {
-			continue
-		}
-
-		res = append(res, k)
-	}
-
-	return res
-}
+// func (cr *Core) getLinksList() []string {
+//
+// 	res := make([]string, 0, len(cr.levelMap))
+//
+// 	for k := range cr.levelMap {
+//
+// 		if k == cr.rootDomain {
+// 			continue
+// 		}
+//
+// 		res = append(res, k)
+// 	}
+//
+// 	return res
+// }

@@ -208,14 +208,14 @@ func TestCore_Run(t *testing.T) {
 
 			mockPageLoader := NewMockPageLoader(mockCtrl)
 			mockPageLoader.EXPECT().GetPageLinks(gomock.Any(), gomock.Any()).AnyTimes().
-				DoAndReturn(func(ctx context.Context, url string) []string {
-					return test.srcLinks[url]
+				DoAndReturn(func(ctx context.Context, url string) ([]string, error) {
+					return test.srcLinks[url], nil
 				})
 
 			res := make(map[string]interface{})
 
 			mockReporter := NewMockReporter(mockCtrl)
-			mockReporter.EXPECT().Save(gomock.Any()).AnyTimes().Do(func(root *PageItem) {
+			mockReporter.EXPECT().Save(gomock.Any()).AnyTimes().DoAndReturn(func(root *PageItem) error {
 
 				var funcChildren func(string, *PageItem)
 				funcChildren = func(parentPath string, item *PageItem) {
@@ -223,18 +223,18 @@ func TestCore_Run(t *testing.T) {
 					var curPath string
 
 					if len(parentPath) == 0 {
-						curPath = fmt.Sprintf("[%s]", item.url)
+						curPath = fmt.Sprintf("[%s]", item.URL)
 					} else {
-						curPath = fmt.Sprintf("%s:[%s]", parentPath, item.url)
+						curPath = fmt.Sprintf("%s:[%s]", parentPath, item.URL)
 					}
 
 					res[curPath] = nil
 
-					if len(item.children) == 0 {
+					if len(item.Children) == 0 {
 						return
 					}
 
-					for _, it := range item.children {
+					for _, it := range item.Children {
 						funcChildren(curPath, it)
 					}
 				}
@@ -246,15 +246,16 @@ func TestCore_Run(t *testing.T) {
 					for i := 0; i < lvl; i++ {
 						fmt.Print("  ")
 					}
-					fmt.Println(item.url)
+					fmt.Println(item.URL)
 
-					for _, c := range item.children {
+					for _, c := range item.Children {
 						fPrint(lvl+1, c)
 					}
 				}
 
 				fPrint(0, root)
 
+				return nil
 			})
 
 			cr := New(Config{

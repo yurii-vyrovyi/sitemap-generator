@@ -73,7 +73,7 @@ func (m *MockReporter) EXPECT() *MockReporterMockRecorder {
 }
 
 // Save mocks base method.
-func (m *MockReporter) Save(arg0 []string) error {
+func (m *MockReporter) Save(arg0 *PageItem) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", arg0)
 	ret0, _ := ret[0].(error)
