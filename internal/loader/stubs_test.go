@@ -12,7 +12,7 @@ var (
 
 <body>
 	<a href="http://abs.link.com">Abs link</a>
-	<a href="rel/link">Abs link</a>
+	<a href="/rel/link">Relative link</a>
 <body/>
 
 <html/>
@@ -33,7 +33,7 @@ var (
 
 <body>
 	<a href="http://abs.link.com">Abs link</a>
-	<a href="rel/link">Abs link</a>
+	<a href="/rel/link">Relative link</a>
 <body/>
 
 <html/>
@@ -51,7 +51,7 @@ var (
 
 <body>
 	<a href="http://abs.link.com">Abs link</a>
-	<a href="rel/link">Abs link</a>
+	<a href="/rel/link">Relative link</a>
 <body/>
 
 <html/>

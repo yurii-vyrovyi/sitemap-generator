@@ -63,19 +63,21 @@ func Test_Queue(t *testing.T) {
 		NRoutines      = 5
 		NRoutinePoints = 200
 	)
-	chanClose := make(chan interface{})
 	wg := sync.WaitGroup{}
 
 	mapRes := make(map[string]int)
 
-	// iPop := 0
+	muxRes := sync.Mutex{}
+
+	wgPop := sync.WaitGroup{}
+	wgPop.Add(1)
 	go func() {
+		defer func() {
+			wgPop.Done()
+			fmt.Println("wgPop.Done()")
+		}()
+
 		for {
-			select {
-			case <-chanClose:
-				return
-			default:
-			}
 
 			v, err := q.Pop()
 			if err != nil {
@@ -83,7 +85,10 @@ func Test_Queue(t *testing.T) {
 			}
 
 			strV, _ := v.(string)
+
+			muxRes.Lock()
 			mapRes[strV] = mapRes[strV] + 1
+			muxRes.Unlock()
 		}
 	}()
 
@@ -103,8 +108,11 @@ func Test_Queue(t *testing.T) {
 
 	wg.Wait()
 
-	time.Sleep(5 * time.Second)
-	close(chanClose)
+	// a delay to allow Pop worker to drain the queue
+	time.Sleep(1 * time.Second)
+
+	q.Close()
+	wgPop.Wait()
 
 	require.Equal(t, NRoutines*NRoutinePoints, len(mapRes))
 

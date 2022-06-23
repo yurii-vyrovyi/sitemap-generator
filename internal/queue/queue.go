@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"container/list"
 	"io"
 	"sync"
 )
@@ -12,22 +13,17 @@ type (
 	// Pop() maybe called from many routines.
 	// When Close() is called all blocked Pop() calls return io.EOF error.
 	ConcurrentQueue struct {
-		head *Element
-		tail *Element
+		l *list.List
 
 		cond *sync.Cond
 		stop bool
-	}
-
-	Element struct {
-		value    interface{}
-		nextElem *Element
 	}
 )
 
 func New() *ConcurrentQueue {
 	return &ConcurrentQueue{
 		cond: sync.NewCond(&sync.Mutex{}),
+		l:    list.New(),
 	}
 }
 
@@ -55,17 +51,7 @@ func (q *ConcurrentQueue) Push(v interface{}) {
 		return
 	}
 
-	newElem := Element{value: v}
-
-	if q.tail == nil {
-		q.head = &newElem
-		q.tail = &newElem
-
-	} else {
-		q.tail.nextElem = &newElem
-		q.tail = &newElem
-	}
-
+	q.l.PushBack(v)
 }
 
 // Pop returns a value from the queue head.
@@ -75,7 +61,9 @@ func (q *ConcurrentQueue) Pop() (interface{}, error) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
-	for q.head == nil && !q.stop {
+	var elem *list.Element
+
+	for elem = q.l.Front(); elem == nil && !q.stop; elem = q.l.Front() {
 		q.cond.Wait()
 	}
 
@@ -83,13 +71,7 @@ func (q *ConcurrentQueue) Pop() (interface{}, error) {
 		return nil, io.EOF
 	}
 
-	head := *q.head
-	head.nextElem = nil
+	q.l.Remove(elem)
 
-	q.head = q.head.nextElem
-	if q.head == nil {
-		q.tail = nil
-	}
-
-	return head.value, nil
+	return elem.Value, nil
 }

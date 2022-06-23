@@ -24,11 +24,6 @@ func New() *Loader {
 	return &Loader{}
 }
 
-func (l *Loader) GetPage(ctx context.Context, pageURL string) ([]byte, error) {
-
-	return getPage(ctx, pageURL)
-}
-
 // GetPageLinks returns all URLs of <a> tags on the page. URLs are absolute.
 // GetPageLinks ignores invalid URLs including <base> href URL.
 func (l *Loader) GetPageLinks(ctx context.Context, pageURL string) []string {
@@ -164,8 +159,9 @@ func updateLinksWithBase(links []string, base, page string) []string {
 			continue
 		}
 
-		urlLink, err := url.Parse(link)
-		if err != nil || (urlLink.Scheme != "http" && urlLink.Scheme != "https") {
+		// checking schema to exclude mail links
+		urlLink, err := url.ParseRequestURI(link)
+		if err != nil || (urlLink.Scheme != "" && urlLink.Scheme != "http" && urlLink.Scheme != "https") {
 			continue
 		}
 
