@@ -21,141 +21,176 @@ func TestCore_Run(t *testing.T) {
 
 	tests := map[string]Test{
 		"Tree": {
-			startURL: "start.e.com",
+			startURL: "http://start.e.com",
 			maxDepth: 3,
 			srcLinks: map[string][]string{
-				"start.e.com": {
-					"p_00_01.e.com",
-					"p_00_02.e.com",
+				"http://start.e.com": {
+					"http://start.e.com/link_00_01",
+					"http://start.e.com/link_00_02",
 				},
 
-				"p_00_01.e.com": {
-					"p_01_01.e.com",
-					"p_01_02.e.com",
+				"http://start.e.com/link_00_01": {
+					"http://start.e.com/link_01_01",
+					"http://start.e.com/link_01_02",
 				},
 
-				"p_00_02.e.com": {
-					"p_02_01.e.com",
-					"p_02_02.e.com",
+				"http://start.e.com/link_00_02": {
+					"http://start.e.com/link_02_01",
+					"http://start.e.com/link_02_02",
 				},
 			},
 
 			res: map[string]interface{}{
-				"start.e.com":                             nil,
-				"start.e.com:p_00_01.e.com":               nil,
-				"start.e.com:p_00_01.e.com:p_01_01.e.com": nil,
-				"start.e.com:p_00_01.e.com:p_01_02.e.com": nil,
-				"start.e.com:p_00_02.e.com":               nil,
-				"start.e.com:p_00_02.e.com:p_02_01.e.com": nil,
-				"start.e.com:p_00_02.e.com:p_02_02.e.com": nil,
+				"[http://start.e.com]":                                                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_02]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_01]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_01]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_02]": nil,
 			},
 		},
 
 		"More than MaxDepth": {
-			startURL: "start.e.com",
+			startURL: "http://start.e.com",
 			maxDepth: 2,
 			srcLinks: map[string][]string{
-				"start.e.com": {
-					"p_00_01.e.com",
-					"p_00_02.e.com",
+				"http://start.e.com": {
+					"http://start.e.com/link_00_01",
+					"http://start.e.com/link_00_02",
 				},
 
-				"p_00_01.e.com": {
-					"p_01_01.e.com",
-					"p_01_02.e.com",
+				"http://start.e.com/link_00_01": {
+					"http://start.e.com/link_01_01",
+					"http://start.e.com/link_01_02",
 				},
 
-				"p_01_01.e.com": {
-					"p_01_03.e.com",
-					"p_01_04.e.com",
+				"http://start.e.com/link_01_01": {
+					"http://start.e.com/link_01_03",
+					"http://start.e.com/link_01_04",
 				},
 
-				"p_00_02.e.com": {
-					"p_02_01.e.com",
-					"p_02_02.e.com",
+				"http://start.e.com/link_00_02": {
+					"http://start.e.com/link_02_01",
+					"http://start.e.com/link_02_02",
 				},
 			},
 
 			res: map[string]interface{}{
-				"start.e.com":                             nil,
-				"start.e.com:p_00_01.e.com":               nil,
-				"start.e.com:p_00_01.e.com:p_01_01.e.com": nil,
-				"start.e.com:p_00_01.e.com:p_01_02.e.com": nil,
-				"start.e.com:p_00_02.e.com":               nil,
-				"start.e.com:p_00_02.e.com:p_02_01.e.com": nil,
-				"start.e.com:p_00_02.e.com:p_02_02.e.com": nil,
+				"[http://start.e.com]":                                                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_01]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_02]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_01]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_02]": nil,
 			},
 		},
 
 		"Duplicate": {
-			startURL: "start.e.com",
+			startURL: "http://start.e.com",
 			maxDepth: 5,
 			srcLinks: map[string][]string{
-				"start.e.com": {
-					"p_00_01.e.com",
-					"p_00_02.e.com",
+
+				"http://start.e.com": {
+					"http://start.e.com/link_00_01",
+					"http://start.e.com/link_00_02",
 				},
 
-				"p_00_01.e.com": {
-					"p_01_01.e.com",
-					"p_01_02.e.com",
+				"http://start.e.com/link_00_01": {
+					"http://start.e.com/link_01_01",
+					"http://start.e.com/link_01_02",
 				},
 
-				"p_01_01.e.com": {
-					"p_01_03.e.com",
-					"p_01_04.e.com",
+				"http://start.e.com/link_01_01": {
+					"http://start.e.com/link_01_03", // duplicate
+					"http://start.e.com/link_01_04",
 				},
 
-				"p_00_02.e.com": {
-					"p_01_03.e.com",
-					"p_02_02.e.com",
+				"http://start.e.com/link_00_02": {
+					"http://start.e.com/link_01_03", // duplicate
+					"http://start.e.com/link_02_02",
 				},
 			},
+
 			res: map[string]interface{}{
-				"start.e.com":                                           nil,
-				"start.e.com:p_00_01.e.com":                             nil,
-				"start.e.com:p_00_01.e.com:p_01_01.e.com":               nil,
-				"start.e.com:p_00_01.e.com:p_01_02.e.com":               nil,
-				"start.e.com:p_00_01.e.com:p_01_01.e.com:p_01_04.e.com": nil,
-				"start.e.com:p_00_02.e.com":                             nil,
-				"start.e.com:p_00_02.e.com:p_01_03.e.com":               nil,
-				"start.e.com:p_00_02.e.com:p_02_02.e.com":               nil,
+				"[http://start.e.com]":                                                                                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]":                                                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_01]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_02]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_01]:[http://start.e.com/link_01_04]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]":                                                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_01_03]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_02]":                                 nil,
 			},
 		},
 
 		"Cycle": {
-			startURL: "start.e.com",
+			startURL: "http://start.e.com",
 			maxDepth: 5,
 			srcLinks: map[string][]string{
-				"start.e.com": {
-					"p_00_01.e.com",
-					"p_00_02.e.com",
+
+				"http://start.e.com": {
+					"http://start.e.com/link_00_01",
+					"http://start.e.com/link_00_02",
 				},
 
-				"p_00_01.e.com": {
-					"p_01_01.e.com",
-					"p_02_02.e.com",
+				"http://start.e.com/link_00_01": {
+					"http://start.e.com/link_01_01",
+					"http://start.e.com/link_01_02",
 				},
 
-				"p_00_02.e.com": {
-					"p_02_01.e.com",
-					"p_02_03.e.com",
+				"http://start.e.com/link_00_02": {
+					"http://start.e.com/link_02_01",
+					"http://start.e.com/link_02_03", // loop
 				},
 
-				"p_02_03.e.com": {
-					"p_00_01.e.com",
-					"p_02_02.e.com",
+				"http://start.e.com/link_02_03": {
+					"http://start.e.com/link_00_01",
+					"http://start.e.com/link_00_02", // loop
 				},
 			},
 
 			res: map[string]interface{}{
-				"start.e.com":                             nil,
-				"start.e.com:p_00_01.e.com":               nil,
-				"start.e.com:p_00_01.e.com:p_01_01.e.com": nil,
-				"start.e.com:p_00_01.e.com:p_02_02.e.com": nil,
-				"start.e.com:p_00_02.e.com":               nil,
-				"start.e.com:p_00_02.e.com:p_02_01.e.com": nil,
-				"start.e.com:p_00_02.e.com:p_02_03.e.com": nil,
+				"[http://start.e.com]":                                                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_01]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_02]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_01]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_03]": nil,
+			},
+		},
+
+		"External domain": {
+			startURL: "http://start.e.com",
+			maxDepth: 3,
+			srcLinks: map[string][]string{
+				"http://start.e.com": {
+					"http://start.e.com/link_00_01",
+					"http://start.e.com/link_00_02",
+					"http://external.domain.com",
+				},
+
+				"http://start.e.com/link_00_01": {
+					"http://start.e.com/link_01_01",
+					"http://start.e.com/link_01_02",
+				},
+
+				"http://start.e.com/link_00_02": {
+					"http://start.e.com/link_02_01",
+					"http://start.e.com/link_02_02",
+				},
+			},
+
+			res: map[string]interface{}{
+				"[http://start.e.com]":                                                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_02]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_01]:[http://start.e.com/link_01_01]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]":                                 nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_01]": nil,
+				"[http://start.e.com]:[http://start.e.com/link_00_02]:[http://start.e.com/link_02_02]": nil,
 			},
 		},
 	}
@@ -188,9 +223,9 @@ func TestCore_Run(t *testing.T) {
 					var curPath string
 
 					if len(parentPath) == 0 {
-						curPath = item.url
+						curPath = fmt.Sprintf("[%s]", item.url)
 					} else {
-						curPath = fmt.Sprintf("%s:%s", parentPath, item.url)
+						curPath = fmt.Sprintf("%s:[%s]", parentPath, item.url)
 					}
 
 					res[curPath] = nil

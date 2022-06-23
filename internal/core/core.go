@@ -2,6 +2,9 @@ package core
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"net/url"
 	"sync"
 
 	"github.com/yurii-vyrovyi/sitemap-generator/internal/queue"
@@ -25,7 +28,7 @@ type (
 		reporter   Reporter
 
 		// levelMap stores processed URLs and a parent.
-		// In case we encounter an URL again, we can compare its level and leave the one with a lower level,
+		// In case we encounter a URL again, we can compare its level and leave the one with a lower level,
 		// so resulting map will have more entries.
 		levelMap map[string]PageLevelItem
 
@@ -34,6 +37,8 @@ type (
 
 		// Stores tasks for workers
 		tasksQueue *queue.ConcurrentQueue
+
+		rootDomain string
 	}
 
 	Config struct {
@@ -80,7 +85,7 @@ func (item *PageItem) addChild(c *PageItem) {
 func (item *PageItem) dropChild(url string) {
 	for i, c := range item.children {
 		if c.url == url {
-			item.children = nil
+			item.children[i] = nil
 
 			switch {
 			case i == 0:
@@ -111,11 +116,23 @@ func New(config Config, pageLoader PageLoader, reporter Reporter) *Core {
 
 // Run starts links collection.
 // It parses pages and collects links and recursively requests links for these pages.
-// It finishes when all links are collected or MaxDepth is riched.
+// It finishes when all links are collected or MaxDepth is reached.
 func (cr *Core) Run(ctx context.Context) error {
 
-	wg := sync.WaitGroup{}
+	// root domain URL
+	rootDomain, err := url.Parse(cr.config.URL)
+	if err != nil {
+		return fmt.Errorf("bad URL [%v]: %v", cr.config.URL, err)
+	}
 
+	domainURL, err := url.ParseRequestURI(rootDomain.String())
+	if err != nil {
+		return fmt.Errorf("bad root URL [%v]: %w", cr.config.URL, err)
+	}
+
+	cr.rootDomain = domainURL.Hostname()
+
+	wg := sync.WaitGroup{}
 	chanResults := make(chan TaskResult)
 
 	for i := 0; i < cr.config.NWorkers; i++ {
@@ -240,10 +257,28 @@ func (cr *Core) runWorker(
 
 			links := cr.pageLoader.GetPageLinks(ctx, task.url)
 
+			var domainURLs []string
+
+			for _, link := range links {
+				u, err := url.ParseRequestURI(link)
+				if u == nil {
+
+					log.Printf("ERR: loader returned a bad URL [%v]: %v", link, err)
+					continue
+				}
+
+				// ignoring links to other domains
+				if u.Hostname() != cr.rootDomain {
+					continue
+				}
+
+				domainURLs = append(domainURLs, link)
+			}
+
 			res := TaskResult{
 				url:    task.url,
 				level:  task.level,
-				links:  links,
+				links:  domainURLs,
 				parent: task.parent,
 			}
 
