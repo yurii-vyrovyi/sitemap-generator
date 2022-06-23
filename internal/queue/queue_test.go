@@ -84,10 +84,6 @@ func Test_Queue(t *testing.T) {
 
 			strV, _ := v.(string)
 			mapRes[strV] = mapRes[strV] + 1
-
-			// if (iPop+1)%15 == 0 {
-			// 	time.Sleep(50 * time.Millisecond)
-			// }
 		}
 	}()
 
@@ -100,10 +96,6 @@ func Test_Queue(t *testing.T) {
 			for iPoint := 0; iPoint < NRoutinePoints; iPoint++ {
 				key := fmt.Sprintf("%d:%d", iRoutine, iPoint)
 				q.Push(key)
-
-				// if (iPoint+1)%25 == 0 {
-				// 	time.Sleep(500 * time.Millisecond)
-				// }
 			}
 
 		}(iRoutine)

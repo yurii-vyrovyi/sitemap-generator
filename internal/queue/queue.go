@@ -83,7 +83,8 @@ func (q *ConcurrentQueue) Pop() (interface{}, error) {
 		return nil, io.EOF
 	}
 
-	head := q.head
+	head := *q.head
+	head.nextElem = nil
 
 	q.head = q.head.nextElem
 	if q.head == nil {
