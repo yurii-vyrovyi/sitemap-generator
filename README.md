@@ -19,6 +19,6 @@ optional
 A protocol description could be found [here](https://sitemaps.org/protocol.html).
 
 ### Notes
-It was created as a test task. While it works in general and shows approaches there aree several weak points that need to be improved to make this sitemap generator a real tool:
+It was created as a test task. While it works in general and shows approaches there are several weak points that need to be improved to make this sitemap generator a real tool:
 - escaping is done partially
 - resulting file size is not limited
