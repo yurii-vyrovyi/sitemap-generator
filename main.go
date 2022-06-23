@@ -74,14 +74,14 @@ func run(ctx context.Context) error {
 	var NWorkers int
 	w, ok := argsMap[ParamParallel]
 	if ok {
-		NWorkers, _ = w.(int)
+		NWorkers, _ = w.(int) //nolint:errcheck
 	}
 	if NWorkers == 0 {
 		NWorkers = DefaultParallel
 	}
 
 	var MaxDepth int
-	d, ok := argsMap[ParamParallel]
+	d, ok := argsMap[ParamMaxDepth]
 	if ok {
 		MaxDepth, _ = d.(int)
 	}

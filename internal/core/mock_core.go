@@ -35,11 +35,12 @@ func (m *MockPageLoader) EXPECT() *MockPageLoaderMockRecorder {
 }
 
 // GetPageLinks mocks base method.
-func (m *MockPageLoader) GetPageLinks(arg0 context.Context, arg1 string) []string {
+func (m *MockPageLoader) GetPageLinks(arg0 context.Context, arg1 string) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPageLinks", arg0, arg1)
 	ret0, _ := ret[0].([]string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetPageLinks indicates an expected call of GetPageLinks.
@@ -72,15 +73,15 @@ func (m *MockReporter) EXPECT() *MockReporterMockRecorder {
 }
 
 // Save mocks base method.
-func (m *MockReporter) Save(root *PageItem) error {
+func (m *MockReporter) Save(arg0 []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", root)
+	ret := m.ctrl.Call(m, "Save", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Save indicates an expected call of Save.
-func (mr *MockReporterMockRecorder) Save(root interface{}) *gomock.Call {
+func (mr *MockReporterMockRecorder) Save(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockReporter)(nil).Save), root)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockReporter)(nil).Save), arg0)
 }

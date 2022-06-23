@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"io"
 	"sync"
+	"sync/atomic"
 )
 
 type (
@@ -16,15 +17,19 @@ type (
 		l *list.List
 
 		cond *sync.Cond
-		stop bool
+		stop atomic.Value
 	}
 )
 
 func New() *ConcurrentQueue {
-	return &ConcurrentQueue{
+	q := ConcurrentQueue{
 		cond: sync.NewCond(&sync.Mutex{}),
 		l:    list.New(),
 	}
+
+	q.stop.Store(false)
+
+	return &q
 }
 
 // Close unblocks all Pop calls.
@@ -32,7 +37,7 @@ func New() *ConcurrentQueue {
 func (q *ConcurrentQueue) Close() {
 	q.cond.L.Lock()
 
-	q.stop = true
+	q.stop.Store(true)
 
 	q.cond.L.Unlock()
 	q.cond.Broadcast()
@@ -40,16 +45,15 @@ func (q *ConcurrentQueue) Close() {
 
 // Push adds a value into the end of queue
 func (q *ConcurrentQueue) Push(v interface{}) {
+	if q.stop.Load().(bool) {
+		return
+	}
 
 	q.cond.L.Lock()
 	defer func() {
 		q.cond.L.Unlock()
 		q.cond.Signal()
 	}()
-
-	if q.stop {
-		return
-	}
 
 	q.l.PushBack(v)
 }
@@ -58,16 +62,20 @@ func (q *ConcurrentQueue) Push(v interface{}) {
 // If the queue is empty Pop() waits until a new value will be pushed.
 // After Close() call app blocked Pop() calls are released.
 func (q *ConcurrentQueue) Pop() (interface{}, error) {
+	if q.stop.Load().(bool) {
+		return nil, io.EOF
+	}
+
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
 	var elem *list.Element
 
-	for elem = q.l.Front(); elem == nil && !q.stop; elem = q.l.Front() {
+	for elem = q.l.Front(); elem == nil && !q.stop.Load().(bool); elem = q.l.Front() {
 		q.cond.Wait()
 	}
 
-	if q.stop {
+	if q.stop.Load().(bool) {
 		return nil, io.EOF
 	}
 

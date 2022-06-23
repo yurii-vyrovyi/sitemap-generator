@@ -10,6 +10,7 @@ import (
 )
 
 func TestQueue_OneThread(t *testing.T) {
+	t.Parallel()
 
 	q := New()
 
@@ -29,6 +30,7 @@ func TestQueue_OneThread(t *testing.T) {
 }
 
 func TestQueue_Parallel(t *testing.T) {
+	t.Parallel()
 
 	q := New()
 
@@ -39,7 +41,7 @@ func TestQueue_Parallel(t *testing.T) {
 				return
 			}
 
-			s := v.(string)
+			s := v.(string) //nolint:errcheck
 			fmt.Println(s)
 		}
 	}()
@@ -56,6 +58,7 @@ func TestQueue_Parallel(t *testing.T) {
 }
 
 func Test_Queue(t *testing.T) {
+	t.Parallel()
 
 	q := New()
 
@@ -84,10 +87,10 @@ func Test_Queue(t *testing.T) {
 				return
 			}
 
-			strV, _ := v.(string)
+			strV, _ := v.(string) //nolint:errcheck
 
 			muxRes.Lock()
-			mapRes[strV] = mapRes[strV] + 1
+			mapRes[strV]++
 			muxRes.Unlock()
 		}
 	}()

@@ -26,17 +26,17 @@ func New() *Loader {
 
 // GetPageLinks returns all URLs of <a> tags on the page. URLs are absolute.
 // GetPageLinks ignores invalid URLs including <base> href URL.
-func (l *Loader) GetPageLinks(ctx context.Context, pageURL string) []string {
+func (l *Loader) GetPageLinks(ctx context.Context, pageURL string) ([]string, error) {
 	page, err := getPage(ctx, pageURL)
 	if err != nil {
-		log.Printf("failed to load page: %v", err)
-		return nil
+		// log.Printf("failed to load page: %v", err)
+		return nil, fmt.Errorf("failed to load page: %w", err)
 	}
 
 	links, bases := getLinksAndBase(page)
 	if err != nil {
-		log.Printf("failed to extract links from the page: %v", err)
-		return nil
+		// log.Printf("failed to extract links from the page: %v", err)
+		return nil, fmt.Errorf("failed to extract links from the page: %w", err)
 	}
 
 	var baseURL string
@@ -54,7 +54,7 @@ func (l *Loader) GetPageLinks(ctx context.Context, pageURL string) []string {
 
 	absLinks := updateLinksWithBase(links, baseURL, pageURL)
 
-	return absLinks
+	return absLinks, nil
 }
 
 func getPage(ctx context.Context, pageURL string) ([]byte, error) {

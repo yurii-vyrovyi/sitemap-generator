@@ -263,7 +263,7 @@ func TestCore_Run(t *testing.T) {
 				MaxDepth: test.maxDepth,
 			}, mockPageLoader, mockReporter)
 
-			_ = cr.Run(ctx)
+			_ = cr.Run(ctx) // nolint:errcheck
 
 			require.Equal(t, test.res, res)
 		})

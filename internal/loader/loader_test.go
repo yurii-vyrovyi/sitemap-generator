@@ -170,11 +170,11 @@ func TestLoader_getPageLinks(t *testing.T) {
 			t.Parallel()
 
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_, _ = w.Write(test.srcPage)
+				_, _ = w.Write(test.srcPage) //nolint:errcheck
 			}))
 
 			ldr := New()
-			res := ldr.GetPageLinks(ctx, server.URL)
+			res, _ := ldr.GetPageLinks(ctx, server.URL) //nolint:errcheck
 
 			require.Equal(t, test.expRes, res)
 		})

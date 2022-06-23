@@ -2,22 +2,22 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/yurii-vyrovyi/sitemap-generator/internal/queue"
 	"log"
 	"net/url"
 	"sync"
-
-	"github.com/yurii-vyrovyi/sitemap-generator/internal/queue"
 )
 
 //go:generate mockgen -source core.go -destination mock_core.go -package core
 type (
 	PageLoader interface {
-		GetPageLinks(context.Context, string) []string
+		GetPageLinks(context.Context, string) ([]string, error)
 	}
 
 	Reporter interface {
-		Save(root *PageItem) error
+		Save([]string) error
 	}
 )
 
@@ -122,7 +122,7 @@ func (cr *Core) Run(ctx context.Context) error {
 	// root domain URL
 	rootDomain, err := url.Parse(cr.config.URL)
 	if err != nil {
-		return fmt.Errorf("bad URL [%v]: %v", cr.config.URL, err)
+		return fmt.Errorf("bad URL [%v]: %w", cr.config.URL, err)
 	}
 
 	domainURL, err := url.ParseRequestURI(rootDomain.String())
@@ -134,9 +134,18 @@ func (cr *Core) Run(ctx context.Context) error {
 
 	wg := sync.WaitGroup{}
 	chanResults := make(chan TaskResult)
+	chanErr := make(chan error)
 
+	// handling errors
+	go func() {
+		for err := range chanErr {
+			log.Printf("ERR: %v", err)
+		}
+	}()
+
+	wgWorkers := sync.WaitGroup{}
 	for i := 0; i < cr.config.NWorkers; i++ {
-		cr.runWorker(ctx, &wg, chanResults, nil)
+		cr.runWorker(ctx, &wgWorkers, chanResults, nil)
 	}
 
 	cr.tasksQueue.Push(Task{
@@ -149,14 +158,14 @@ func (cr *Core) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			cr.tasksQueue.Close()
 			wg.Done()
 		}()
 
+		// loop:
 		for {
 			select {
 			case <-ctx.Done():
-				break
+				return
 
 			case res, ok := <-chanResults:
 				if !ok {
@@ -222,9 +231,18 @@ func (cr *Core) Run(ctx context.Context) error {
 	}()
 
 	wg.Wait()
-	close(chanResults)
 
-	_ = cr.reporter.Save(cr.root)
+	cr.tasksQueue.Close()
+	wgWorkers.Wait()
+
+	close(chanResults)
+	close(chanErr)
+
+	links := cr.getLinksList()
+
+	if err := cr.reporter.Save(links); err != nil {
+		return fmt.Errorf("failed to save results: %w", err)
+	}
 
 	return nil
 }
@@ -236,12 +254,15 @@ func (cr *Core) runWorker(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	chanResults chan TaskResult,
-	chanErr chan error,
+	chanError chan error,
 ) {
 
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
+
+		defer func() {
+			wg.Done()
+		}()
 
 		for {
 
@@ -255,15 +276,23 @@ func (cr *Core) runWorker(
 				continue
 			}
 
-			links := cr.pageLoader.GetPageLinks(ctx, task.url)
+			log.Printf("requesting page [%v] [%v]", task.url, task.level)
+
+			links, err := cr.pageLoader.GetPageLinks(ctx, task.url)
+			if err != nil {
+				if !errors.Is(err, context.Canceled) {
+					log.Printf("ERR: GetPageLinks: %v", err)
+				} else {
+					return
+				}
+			}
 
 			var domainURLs []string
 
 			for _, link := range links {
 				u, err := url.ParseRequestURI(link)
 				if u == nil {
-
-					log.Printf("ERR: loader returned a bad URL [%v]: %v", link, err)
+					chanError <- fmt.Errorf("loader returned a bad URL [%v]: %w", link, err)
 					continue
 				}
 
@@ -286,4 +315,20 @@ func (cr *Core) runWorker(
 		}
 	}()
 
+}
+
+func (cr *Core) getLinksList() []string {
+
+	res := make([]string, 0, len(cr.levelMap))
+
+	for k := range cr.levelMap {
+
+		if k == cr.rootDomain {
+			continue
+		}
+
+		res = append(res, k)
+	}
+
+	return res
 }
